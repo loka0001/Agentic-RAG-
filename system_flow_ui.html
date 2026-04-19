@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Care System Orchestrator - System Flow</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+        :root {
+            --bg-color: #0b1120;
+            --text-color: #f8fafc;
+            --primary-glow: rgba(56, 189, 248, 0.4);
+            --primary-border: rgba(56, 189, 248, 0.6);
+            --card-bg: rgba(30, 41, 59, 0.6);
+            --accent-glow: rgba(167, 139, 250, 0.4);
+            --accent-border: rgba(167, 139, 250, 0.6);
+            --success-glow: rgba(52, 211, 153, 0.4);
+            --success-border: rgba(52, 211, 153, 0.6);
+            --warning-glow: rgba(245, 158, 11, 0.4);
+            --warning-border: rgba(245, 158, 11, 0.6);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(56, 189, 248, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 85% 30%, rgba(167, 139, 250, 0.08) 0%, transparent 40%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 4rem 2rem;
+            overflow-x: hidden;
+        }
+
+        h1 {
+            font-size: 2.75rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            text-align: center;
+            background: linear-gradient(135deg, #38bdf8, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: fadeInDown 0.8s ease-out;
+            letter-spacing: -0.02em;
+        }
+
+        p.subtitle {
+            color: #94a3b8;
+            margin-bottom: 4rem;
+            text-align: center;
+            font-size: 1.15rem;
+            max-width: 600px;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .flow-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .line {
+            width: 2px;
+            height: 40px;
+            background: linear-gradient(to bottom, var(--primary-border), transparent);
+            margin: 10px 0;
+            opacity: 0;
+            transform-origin: top;
+            animation: drawLine 0.4s ease-out forwards;
+        }
+        
+        .line.active {
+            background: linear-gradient(to bottom, var(--primary-border), var(--primary-glow));
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        .branch-container {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            position: relative;
+            margin: 20px 0;
+        }
+
+        .branch-left, .branch-right {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 45%;
+        }
+
+        .node {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 1.5rem;
+            width: 100%;
+            max-width: 320px;
+            text-align: center;
+            position: relative;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            opacity: 0;
+            transform: translateY(20px);
+            z-index: 2;
+            animation: fadeInNode 0.6s ease-out forwards;
+        }
+
+        .node:hover {
+            transform: translateY(-5px) scale(1.03);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+        }
+
+        .node::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 20px;
+            padding: 2px;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0));
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        .node.input { border-color: var(--success-border); }
+        .node.input:hover { box-shadow: 0 0 20px var(--success-glow); border-color: #34d399; }
+        
+        .node.agent { border-color: var(--primary-border); }
+        .node.agent:hover { box-shadow: 0 0 20px var(--primary-glow); border-color: #38bdf8; }
+        
+        .node.mediator { border-color: var(--accent-border); }
+        .node.mediator:hover { box-shadow: 0 0 20px var(--accent-glow); border-color: #a78bfa; }
+
+        .node.human { border-color: var(--warning-border); background: rgba(245, 158, 11, 0.05); }
+        .node.human:hover { box-shadow: 0 0 20px var(--warning-glow); border-color: #f59e0b; }
+
+        .node-icon {
+            font-size: 2.2rem;
+            margin-bottom: 0.8rem;
+            display: inline-block;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        }
+
+        .node-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #ffffff;
+            letter-spacing: 0.01em;
+        }
+
+        .node-desc {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            line-height: 1.6;
+        }
+        
+        .badge {
+            position: absolute;
+            top: -12px;
+            right: -12px;
+            background: linear-gradient(135deg, #a78bfa, #8b5cf6);
+            color: #ffffff;
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: 20px;
+            box-shadow: 0 4px 10px rgba(167, 139, 250, 0.4);
+        }
+
+        .svg-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .branch-path {
+            fill: none;
+            stroke-width: 2.5;
+            stroke-dasharray: 6, 6;
+            animation: moveDash 20s linear infinite, fadeInPath 1s ease forwards;
+            opacity: 0;
+        }
+
+        .path-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            opacity: 0;
+            animation: fadeInPath 1s ease forwards;
+        }
+
+        @keyframes moveDash {
+            to { stroke-dashoffset: -1000; }
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes drawLine {
+            from { opacity: 0; transform: scaleY(0); }
+            to { opacity: 1; transform: scaleY(1); }
+        }
+
+        @keyframes fadeInNode {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInPath {
+            from { opacity: 0; }
+            to { opacity: 0.7; }
+        }
+
+        @media (max-width: 768px) {
+            .branch-container {
+                flex-direction: column;
+                align-items: center;
+                gap: 20px;
+            }
+            .branch-left, .branch-right {
+                width: 100%;
+            }
+            .branch-path, .path-label {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Care System Orchestrator</h1>
+    <p class="subtitle">Multi-Agent Intelligent Workflow for Patient Care</p>
+
+    <div class="flow-container" id="flow-container">
+        
+        <svg class="svg-container" id="connection-svg"></svg>
+
+        <!-- 1. Patient Input -->
+        <div class="node input" style="animation-delay: 0.2s;">
+            <div class="node-icon">👤</div>
+            <div class="node-title">Patient Input</div>
+            <div class="node-desc">Receives raw multi-modal data.</div>
+        </div>
+
+        <div class="line" style="animation-delay: 0.6s;"></div>
+
+        <!-- 2. Interaction Agent -->
+        <div class="node agent" style="animation-delay: 0.9s;">
+            <div class="node-icon">🤖</div>
+            <div class="node-title">Interaction Agent</div>
+            <div class="node-desc">Converts raw input into structured data.</div>
+        </div>
+
+        <div class="line" style="animation-delay: 1.3s;"></div>
+
+        <!-- 3. Mediator Agent -->
+        <div class="node mediator" id="node-mediator" style="animation-delay: 1.6s;">
+            <div class="badge">Core Evaluator</div>
+            <div class="node-icon">🧠</div>
+            <div class="node-title">Mediator Agent</div>
+            <div class="node-desc">Analyzes all data and generates the mediator_decision. Routes to Doctor if risk is Moderate or more.</div>
+        </div>
+
+        <!-- Branching Logic -->
+        <div class="branch-container" id="branch-container">
+            
+            <div class="branch-left">
+                <!-- Spacing block for direct route -->
+                <div style="height: 60px;"></div>
+                <div class="node" style="opacity: 0; background: transparent; border: none; box-shadow: none; animation: fadeInNode 0.6s ease-out 2.2s forwards;">
+                    <div style="color: #94a3b8; font-size: 0.9rem; font-weight: 500;">✓ Low Risk Path</div>
+                </div>
+            </div>
+
+            <div class="branch-right">
+                <div class="line active" style="animation-delay: 2.2s; margin: 10px 0;"></div>
+
+                <!-- 4. Human Doctor -->
+                <div class="node human" id="node-doctor" style="animation-delay: 2.5s;">
+                    <div class="badge" style="background: #f59e0b;">Moderate/High Risk</div>
+                    <div class="node-icon">👨‍⚕️</div>
+                    <div class="node-title">Doctor Review</div>
+                    <div class="node-desc">Doctor reviews the proposed plan and provides feedback if necessary.</div>
+                </div>
+                
+                <div class="line active" style="animation-delay: 2.9s; margin: 10px 0;"></div>
+                
+                <!-- 5. Modify Decision -->
+                <div class="node mediator" style="animation-delay: 3.2s;">
+                    <div class="node-icon">⚙️</div>
+                    <div class="node-title">Modify Plan</div>
+                    <div class="node-desc">Mediator Agent updates the plan based on Doctor's feedback.</div>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- 6. Confirm Decision -->
+        <div class="node mediator" id="node-finalize" style="animation-delay: 3.8s;">
+            <div class="node-icon">⚖️</div>
+            <div class="node-title">Confirm Plan</div>
+            <div class="node-desc">The final recovery plan is confirmed and ready for the patient.</div>
+        </div>
+
+        <div class="line" style="animation-delay: 4.2s;"></div>
+
+        <!-- 7. Patient Mentor Agent -->
+        <div class="node agent" id="node-mentor" style="animation-delay: 4.6s;">
+            <div class="node-icon">🧭</div>
+            <div class="node-title">Patient Mentor Agent</div>
+            <div class="node-desc">Tracks recovery plan, instructions, and progress. Mentors user to ensure they follow the plan.</div>
+        </div>
+
+        <div class="line" style="animation-delay: 5.0s;"></div>
+
+        <!-- 8. Final Output -->
+        <div class="node input" style="animation-delay: 5.4s; border-color: #34d399; box-shadow: 0 0 15px rgba(52, 211, 153, 0.2);">
+            <div class="node-icon">✅</div>
+            <div class="node-title">Final Output</div>
+            <div class="node-desc">Successful patient guidance delivery.</div>
+        </div>
+
+    </div>
+
+    <script>
+        function drawConnections() {
+            const svg = document.getElementById('connection-svg');
+            const mediator = document.getElementById('node-mediator');
+            const finalize = document.getElementById('node-finalize');
+            const container = document.getElementById('flow-container');
+            const branchLeft = document.querySelector('.branch-left');
+            const branchRight = document.querySelector('.branch-right');
+            
+            if (!svg || !mediator || !finalize || window.innerWidth <= 768) {
+                if (svg) svg.innerHTML = '';
+                return;
+            }
+
+            const containerRect = container.getBoundingClientRect();
+            const mRect = mediator.getBoundingClientRect();
+            const fRect = finalize.getBoundingClientRect();
+            
+            const mentorNode = document.getElementById('node-mentor');
+            const cRect = mentorNode ? mentorNode.getBoundingClientRect() : null;
+
+            const startX = mRect.left - containerRect.left + (mRect.width / 2);
+            const startY = mRect.bottom - containerRect.top;
+
+            const endX = fRect.left - containerRect.left + (fRect.width / 2);
+            const endY = fRect.top - containerRect.top;
+
+            const leftRect = branchLeft.getBoundingClientRect();
+            const leftX = leftRect.left - containerRect.left + (leftRect.width / 2);
+            
+            const rightRect = branchRight.getBoundingClientRect();
+            const rightX = rightRect.left - containerRect.left + (rightRect.width / 2);
+
+            let newPaths = `
+                <path class="branch-path" style="animation-delay: 2.2s;" stroke="rgba(148, 163, 184, 0.4)" 
+                      d="M ${startX} ${startY + 5} C ${startX} ${startY + 40}, ${leftX} ${startY + 30}, ${leftX} ${(startY + endY) / 2} C ${leftX} ${endY - 30}, ${endX} ${endY - 40}, ${endX} ${endY - 5}" />
+                
+                <text x="${leftX - 60}" y="${startY + 80}" class="path-label" fill="#94a3b8" style="animation-delay: 2.2s;">Low Risk Path</text>
+
+                <path class="branch-path" style="animation-delay: 2.2s;" stroke="rgba(245, 158, 11, 0.5)" 
+                      d="M ${startX} ${startY + 5} C ${startX} ${startY + 30}, ${rightX} ${startY + 30}, ${rightX} ${startY + 50}" />
+                
+                <text x="${rightX + 15}" y="${startY + 35}" class="path-label" fill="#f59e0b" style="animation-delay: 2.2s;">Moderate/High Risk</text>
+
+                <path class="branch-path" style="animation-delay: 3.5s;" stroke="rgba(245, 158, 11, 0.5)" 
+                      d="M ${rightX} ${endY - 20} C ${rightX} ${endY - 5}, ${endX} ${endY - 20}, ${endX} ${endY - 5}" />
+            `;
+            
+            // Loop back from Patient Mentor to Mediator
+            if (cRect) {
+                const confX = cRect.left - containerRect.left;
+                const confY = cRect.top - containerRect.top + (cRect.height / 2);
+                const loopEndY = mRect.top - containerRect.top + (mRect.height / 2);
+                
+                const loopPath = `M ${confX - 5} ${confY} C ${confX - 150} ${confY}, ${confX - 150} ${loopEndY}, ${mRect.left - containerRect.left - 5} ${loopEndY}`;
+                newPaths += `
+                    <path class="branch-path" style="animation-delay: 5.0s;" stroke="rgba(56, 189, 248, 0.5)" d="${loopPath}" />
+                    <text x="${confX - 180}" y="${(confY + loopEndY) / 2}" class="path-label" fill="#38bdf8" style="animation-delay: 5.0s;">Questions / Feedback (Cycle restarts)</text>
+                `;
+            }
+            
+            svg.innerHTML = newPaths;
+        }
+
+        window.addEventListener('resize', drawConnections);
+        window.addEventListener('load', () => {
+            drawConnections();
+            setTimeout(drawConnections, 500);
+            setTimeout(drawConnections, 1500);
+        });
+        
+        if (document.readyState === 'complete') {
+            drawConnections();
+        }
+    </script>
+</body>
+</html>
