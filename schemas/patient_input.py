@@ -31,7 +31,7 @@ class PatientInput(BaseModel):
         description="Free-text daily report describing symptoms or physical observations."
     )
 
-    medications: Optional[List[str]] = Field(
+    medications: Optional[str] = Field(
         description="List of medications the patient is taking, optionally including dosage."
     )
 
