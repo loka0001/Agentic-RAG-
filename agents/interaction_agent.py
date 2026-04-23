@@ -69,11 +69,15 @@ class InteractionAgent:
 
         self.agent = self._get_agent()
 
-    def process_raw_input(self, raw_input: PatientInput, thread_id="1") -> StructuredPatientData:
-        messages=self._prepare_messages(raw_input)
-        result=self.agent.invoke({"messages":messages},{"configurable":{"thread_id":thread_id}})
+    def process_raw_input(
+        self, raw_input: PatientInput, thread_id="1"
+    ) -> StructuredPatientData:
+        messages = self._prepare_messages(raw_input)
+        result = self.agent.invoke(
+            {"messages": messages},
+            {"configurable": {"thread_id": thread_id}},
+        )
         return result["structured_response"]
-
 
     def _get_agent(self):
         return create_agent(
@@ -84,54 +88,56 @@ class InteractionAgent:
         )
 
     def _prepare_messages(self, raw_input: PatientInput):
-
         patient_info = " ".join(
-            [f"{key}:{value}" for key, value in raw_input.patient_info]
+            [f"{key}:{value}" for key, value in raw_input.patient_info.items()]
         )
         patient_info += (
             " surgery_protocol "
-            + raw_input.surgery_protocol
+            + (raw_input.surgery_protocol or "")
             + " symptoms "
-            + raw_input.symptoms
+            + (raw_input.symptoms or "")
             + " medications "
-            + " ".join.raw_input.medications
+            + " ".join(raw_input.medications or [])
         )
 
         messages = [{"role": "user", "content": f"patient_info {patient_info} "}]
 
-        for image in raw_input.images:
-            messages.append[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": f"this image about {image.description}.",
-                        },
-                        {
-                            "type": "image",
-                            "base64": f"{image.file_data}",
-                            "mime_type": "image/jpeg",
-                        },
-                    ],
-                }
-            ]
+        if raw_input.images:
+            for image in raw_input.images:
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"this image is about {image.description}.",
+                            },
+                            {
+                                "type": "image",
+                                "base64": image.file_data,
+                                "mime_type": "image/jpeg",
+                            },
+                        ],
+                    }
+                )
 
-        for doc in raw_input.documents:
-            messages.append[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": f"this image about {doc.description}.",
-                        },
-                        {
-                            "type": "image",
-                            "base64": f"{doc.file_data}",
-                            "mime_type": "image/jpeg",
-                        },
-                    ],
-                }
-            ]
+        if raw_input.documents:
+            for doc in raw_input.documents:
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": f"this document is about {doc.description}.",
+                            },
+                            {
+                                "type": "image",
+                                "base64": doc.file_data,
+                                "mime_type": "image/jpeg",
+                            },
+                        ],
+                    }
+                )
+
         return messages
