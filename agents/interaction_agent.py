@@ -132,9 +132,9 @@ class InteractionAgent:
                                 "text": f"this document is about {doc.description}.",
                             },
                             {
-                                "type": "image",
+                                "type": "file",
                                 "base64": doc.file_data,
-                                "mime_type": "image/jpeg",
+                                "mime_type": "application/pdf",
                             },
                         ],
                     }
