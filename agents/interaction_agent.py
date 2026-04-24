@@ -1,3 +1,5 @@
+from unittest import result
+
 from schemas.patient_input import PatientInput
 from schemas.structured_patient_data import StructuredPatientData
 from langchain.agents import create_agent
@@ -67,7 +69,12 @@ class InteractionAgent:
                             Do not include explanations.
                             """
 
-        self.agent = self._get_agent()
+        self.agent = create_agent(
+            model=self.model,
+            system_prompt=self.system_prompt,
+            checkpointer=InMemorySaver(),
+            response_format=ToolStrategy(StructuredPatientData),
+        )
 
     def process_raw_input(
         self, raw_input: PatientInput, thread_id="1"
@@ -79,13 +86,14 @@ class InteractionAgent:
         )
         return result["structured_response"]
 
-    def _get_agent(self):
-        return create_agent(
+    def _analyze_file(self, message):
+        analysis_agent=create_agent(
             model=self.model,
-            system_prompt=self.system_prompt,
-            checkpointer=InMemorySaver(),
-            response_format=ToolStrategy(StructuredPatientData),
+            system_prompt="Your role extract data from medical images or medical documents and describtion",
         )
+        result=analysis_agent.invoke(message)
+        print(result["messages"][-1].content_blocks[0]["text"])
+        return result["messages"][-1].content_blocks[0]["text"]
 
     def _prepare_messages(self, raw_input: PatientInput):
         patient_info = " ".join(
@@ -102,10 +110,10 @@ class InteractionAgent:
 
         messages = [{"role": "user", "content": f"patient_info {patient_info} "}]
 
+        
         if raw_input.images:
             for image in raw_input.images:
-                messages.append(
-                    {
+                image_message={
                         "role": "user",
                         "content": [
                             {
@@ -119,12 +127,12 @@ class InteractionAgent:
                             },
                         ],
                     }
-                )
+                image_description=self._analyze_file(image_message)
+                messages.append({"role": "user", "content": f"image about {image.description} and its description: {image_description}"})
 
         if raw_input.documents:
             for doc in raw_input.documents:
-                messages.append(
-                    {
+                file_messgae={
                         "role": "user",
                         "content": [
                             {
@@ -138,6 +146,9 @@ class InteractionAgent:
                             },
                         ],
                     }
-                )
+                file_description=self._analyze_file(file_messgae)
+                messages.append({"role": "user", "content": f"file about {doc.description} and its description: {file_description}"})
+
+
 
         return messages
