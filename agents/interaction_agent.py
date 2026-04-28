@@ -1,5 +1,3 @@
-from unittest import result
-
 from schemas.patient_input import PatientInput
 from schemas.structured_patient_data import StructuredPatientData
 from langchain.agents import create_agent
