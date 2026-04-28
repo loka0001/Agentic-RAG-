@@ -4,22 +4,17 @@ from schemas.doctor_feedback import DoctorFeedback
 from schemas.patient_feedback import PatientFeedback
 
 class MediatorAgent:
-    """Agent responsible for evaluating risk and generating recovery plans using RAG."""
-    
+    def __init__(self, rag_service):
+        self.rag_service = rag_service
+        
     def process_structured_data(self, data: StructuredPatientData) -> MediatorDecision:
-        """
-        Analyzes all structured data and generates the initial mediator_decision.
-        """
-        pass
+        analysis_result = self.rag_service.analyze_data(data)
+        return MediatorDecision(**analysis_result)
 
     def process_doctor_feedback(self, current_decision: MediatorDecision, feedback: DoctorFeedback) -> MediatorDecision:
-        """
-        Modifies the recovery plan based on explicit doctor feedback.
-        """
-        pass
+        updated_result = self.rag_service.apply_doctor_feedback(current_decision, feedback)
+        return MediatorDecision(**updated_result)
         
     def process_patient_feedback(self, current_decision: MediatorDecision, feedback: PatientFeedback) -> MediatorDecision:
-        """
-        Re-analyzes the plan based on patient questions or feedback, potentially triggering a new cycle.
-        """
-        pass
+        adjusted_result = self.rag_service.apply_patient_feedback(current_decision, feedback)
+        return MediatorDecision(**adjusted_result)
