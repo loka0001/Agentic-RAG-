@@ -7,12 +7,11 @@ from typing import List, Optional
 from agents.patient_mentor_agent import PatientMentorAgent
 from schemas.mentor_state import MentorState
 from schemas.recovery_plan import RecoveryPlan
-# في أول ملف app.py
 from dotenv import load_dotenv
 import os
 
-# ده هيخلي البرنامج يدور على الملف في المجلد اللي فوق مجلد api
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+
 
 # Add root directory to path to allow importing from root-level modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -95,17 +94,16 @@ async def health_check():
     """Check if the API is running."""
     return {"status": "healthy"}
 
-# تحت سطر interaction_agent = InteractionAgent()
 mentor_agent = PatientMentorAgent()
-# --- نقاط اتصال الـ Patient Mentor Agent ---
 
 @app.post("/api/mentor/initialize", summary="Initialize Patient Recovery Plan")
 async def initialize_mentor_plan(plan: RecoveryPlan):
     """
-    تأخذ خطة التعافي وترتبها وتبدأ الحالة من الخطوة الأولى.
-    """
+   Take the recovery plan, organize it, and initialize the state starting from the first step.
+
+      """
     try:
-        # استدعاء الدالة التي ترتب الخطوات وتصفر الذاكرة
+  
         initial_state = mentor_agent.process_confirmed_plan(plan)
         return {"status": "success", "data": initial_state}
     except Exception as e:
@@ -114,19 +112,18 @@ async def initialize_mentor_plan(plan: RecoveryPlan):
 
 @app.post("/api/mentor/update", summary="Process Patient Update")
 async def process_patient_step_update(
-    current_state: MentorState, 
-    patient_message: str = Form(..., description="Message from the patient about their progress")
+    current_state: MentorState,
+    patient_message: str = Form(..., description="Message from the patient about their condition")
 ):
     """
-    تأخذ الحالة الحالية للمريض ورسالته، وتقرر:
-    1. الانتقال للخطوة التالية (MentorState)
-    2. أو طلب توضيح/مراجعة طبية (PatientFeedback)
+    Receives the current patient state and message to decide the next action:
+    1. Advance to the next recovery step (returns MentorState).
+    2. Request clarification or medical review (returns PatientFeedback).
     """
+
     try:
-        # تشغيل العميل لتحليل الرسالة
         result = mentor_agent.process_patient_update(current_state, patient_message)
-        
-        # تحديد نوع المخرج لإعلام الواجهة الأمامية (Frontend) بكيفية التصرف
+
         if isinstance(result, MentorState):
             return {
                 "status": "success",
@@ -141,6 +138,6 @@ async def process_patient_step_update(
                 "message": "Action required: Question or Medical Review.",
                 "feedback": result
             }
-            
+
     except Exception as e:
         return {"status": "error", "message": str(e)}
