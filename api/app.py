@@ -4,6 +4,15 @@ import os
 import json
 import base64
 from typing import List, Optional
+from agents.patient_mentor_agent import PatientMentorAgent
+from schemas.mentor_state import MentorState
+from schemas.recovery_plan import RecoveryPlan
+# في أول ملف app.py
+from dotenv import load_dotenv
+import os
+
+# ده هيخلي البرنامج يدور على الملف في المجلد اللي فوق مجلد api
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
 # Add root directory to path to allow importing from root-level modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -85,3 +94,53 @@ async def test_interaction_agent(
 async def health_check():
     """Check if the API is running."""
     return {"status": "healthy"}
+
+# تحت سطر interaction_agent = InteractionAgent()
+mentor_agent = PatientMentorAgent()
+# --- نقاط اتصال الـ Patient Mentor Agent ---
+
+@app.post("/api/mentor/initialize", summary="Initialize Patient Recovery Plan")
+async def initialize_mentor_plan(plan: RecoveryPlan):
+    """
+    تأخذ خطة التعافي وترتبها وتبدأ الحالة من الخطوة الأولى.
+    """
+    try:
+        # استدعاء الدالة التي ترتب الخطوات وتصفر الذاكرة
+        initial_state = mentor_agent.process_confirmed_plan(plan)
+        return {"status": "success", "data": initial_state}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/api/mentor/update", summary="Process Patient Update")
+async def process_patient_step_update(
+    current_state: MentorState, 
+    patient_message: str = Form(..., description="Message from the patient about their progress")
+):
+    """
+    تأخذ الحالة الحالية للمريض ورسالته، وتقرر:
+    1. الانتقال للخطوة التالية (MentorState)
+    2. أو طلب توضيح/مراجعة طبية (PatientFeedback)
+    """
+    try:
+        # تشغيل العميل لتحليل الرسالة
+        result = mentor_agent.process_patient_update(current_state, patient_message)
+        
+        # تحديد نوع المخرج لإعلام الواجهة الأمامية (Frontend) بكيفية التصرف
+        if isinstance(result, MentorState):
+            return {
+                "status": "success",
+                "type": "state_updated",
+                "message": "Patient moved to the next step.",
+                "new_state": result
+            }
+        else:
+            return {
+                "status": "success",
+                "type": "feedback_required",
+                "message": "Action required: Question or Medical Review.",
+                "feedback": result
+            }
+            
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
